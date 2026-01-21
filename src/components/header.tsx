@@ -1,9 +1,10 @@
+import { Button } from "@/components/ui/button"
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from "@/components/ui/input-group"
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 
 function Header() {
   return (
@@ -11,12 +12,22 @@ function Header() {
      <div className='flex items-center gap-2'>
       <h1 className='text-2xl font-bold'>Place Finder</h1>
      </div>
-     <InputGroup className='max-w-sm bg-white'>
-        <InputGroupInput placeholder="Location + place, e.g. Las Vegas Matcha" />
-        <InputGroupAddon align="inline-end">
-          <InputGroupButton variant="default">Search</InputGroupButton>
-        </InputGroupAddon>
-      </InputGroup>
+     <form className='w-full max-w-3xl'>
+      <FieldGroup>
+        <div className='grid grid-cols-[1fr_1fr_auto] gap-4 items-end'>
+        <Field>
+          <FieldLabel>Location</FieldLabel>
+          <Input type="text" placeholder="Where?" className='bg-white' />
+        </Field>
+        <Field>
+          <FieldLabel>Place</FieldLabel>
+            <Input type="text" placeholder="What?" className='bg-white' />
+        </Field>
+        <Button type="submit" size="lg">Search</Button>
+        </div>
+      </FieldGroup>
+     </form>
+
      <div className='flex items-center gap-2'>
       <h1>About</h1>
      </div>

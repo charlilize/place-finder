@@ -7,11 +7,11 @@ import {
 } from "@/components/ui/card"
 function App() {
   return (
-    <>
+    <div className="h-screen flex flex-col overflow-hidden">
     <Header />
-      <div className='flex items-center justify-center h-screen p-7'>
+      <div className='flex items-center justify-center flex-1 min-h-0 p-7'>
       {/* Place Results */}
-      <div className='w-3/5 h-full p-10 flex flex-wrap gap-4 content-start overflow-auto'>
+      <div className='w-1/2 h-full p-10 flex flex-wrap gap-4 content-start overflow-y-auto scrollbar-none'>
         <Card className="relative w-full max-w-xs overflow-hidden pt-0">
           <div className="bg-primary absolute inset-0 z-30 aspect-4/3 opacity-50 mix-blend-color" />
           <img
@@ -78,9 +78,9 @@ function App() {
         </Card>
       </div>
       {/* Map */}
-      <div className='w-2/5 h-full bg-gray-200'><h1>Map</h1></div>
+      <div className='w-1/2 h-[85vh] bg-gray-200 mr-7'><h1>Map</h1></div>
       </div>
-    </>
+    </div>
   )
 }
 

@@ -6,7 +6,30 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox"
+
 function Header() {
+
+  const cities = [
+    "Tokyo, Japan",
+    "Austin, TX, USA",
+    "Barcelona, Spain",
+    "Melbourne, Australia",
+    "Cape Town, South Africa",
+    "Toronto, Canada",
+    "Munich, Germany",
+    "Buenos Aires, Argentina",
+    "Seattle, WA, USA",
+    "Singapore",
+  ]
+  
   return (
     <div className='flex items-center justify-between bg-gray-200 p-5'>
      <div className='flex items-center gap-2'>
@@ -17,11 +40,21 @@ function Header() {
         <div className='grid grid-cols-[1fr_1fr_auto] gap-4 items-end'>
         <Field>
           <FieldLabel>Location</FieldLabel>
-          <Input type="text" placeholder="Where?" className='bg-white' />
+          <Combobox items={cities}>
+              <ComboboxInput type="text" placeholder="What?" showTrigger={false} className='bg-white' />
+              <ComboboxContent>
+                <ComboboxEmpty>No cities found.</ComboboxEmpty>
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item} value={item}>{item}</ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
         </Field>
         <Field>
-          <FieldLabel>Place</FieldLabel>
-            <Input type="text" placeholder="What?" className='bg-white' />
+          <FieldLabel>Looking for</FieldLabel>
+          <Input type="text" placeholder="Parks, coffee, museums..." className='bg-white' />
         </Field>
         <Button type="submit" size="lg">Search</Button>
         </div>

@@ -11,7 +11,7 @@ function App() {
     <Header />
       <div className='flex items-center justify-center flex-1 min-h-0 p-7'>
       {/* Place Results */}
-      <div className='w-[51.5%] h-full p-2 flex flex-wrap gap-4 content-start overflow-y-auto scrollbar-none'>
+      <div className='w-[51.5%] h-full p-2 pt-12 flex flex-wrap gap-6 content-start justify-center overflow-y-auto scrollbar-none'>
         <Card className="relative w-full max-w-xs overflow-hidden pt-0">
           <div className="bg-primary absolute inset-0 z-30 aspect-4/3 opacity-50 mix-blend-color" />
           <img

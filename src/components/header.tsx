@@ -19,16 +19,26 @@ import {
 const MIN_ADDRESS_LENGTH = 3
 const DELAY = 300
 
+type cityInfo = {
+  formatted: string;
+  state: string;
+  city: string;
+  longitude: number,
+  latitude: number,
+}
+
 function Header() {
-  const [cities, setCities] = useState<string[]>([])  // Cities to show in dropdown
-  const [query, setQuery] = useState("")              // Query to search for cities
+  const [cities, setCities] = useState<cityInfo[]>([])                    // Cities to show in dropdown
+  const [selectedCity, setSelectedCity] = useState<cityInfo | null>(null)  // City that is selected
+  const [cityQuery, setCityQuery] = useState("")                          // Query to search for cities
+  const [lookingForQuery, setLookingForQuery] = useState("")              // Query to search for places
   
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)  // set timer for 300ms
   const abortControllerRef = useRef<AbortController | null>(null)                // like the cancel button for api requests
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCityInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const currentValue = e.target.value
-    setQuery(currentValue)
+    setCityQuery(currentValue)
 
     // remove timer if user typed again before 300ms passed
     if (debounceTimeoutRef.current) {
@@ -47,7 +57,8 @@ function Header() {
     }
 
     // store id of timer in ref
-    // create timer for 300ms before making api request (if user typed again before 300ms passed, timer is cleared above and new timer is created)
+    // start a timer for 300ms in background before making api request 
+    // (if user typed again before 300ms passed, timer is cleared above via new function call and new timer is created)
     debounceTimeoutRef.current = setTimeout(async () => {
       // create a way to cancel this specific request later
       abortControllerRef.current = new AbortController()
@@ -64,12 +75,19 @@ function Header() {
         if (response.ok) {
           // if request is successful, get data
           const data = await response.json()
-          // map data to city names
-          const cityNames = (data.results || []).map(
-            (result: { formatted: string }) => result.formatted
+          // get just city names from data
+          const cities = (data.results || []).map(
+            (result: { formatted: string,  city: string, state: string, lon: number, lat: number }) => ({
+              formatted: result.formatted, 
+              city: result.city,
+              state: result.state,
+              longitude: result.lon,
+              latitude: result.lat
+            })
           )
+
           // set city names in dropdown
-          setCities(cityNames)
+          setCities(cities)
         }
       } catch (error) {
         // Ignore abort errors (user typed again before request finished)
@@ -80,33 +98,57 @@ function Header() {
     }, DELAY)
   }
   
+  const handleCitySelect = (item: cityInfo) => {
+    setCityQuery(item.formatted)
+    setSelectedCity(item)
+  }
+
+  const handleLookingForInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const currentValue = e.target.value
+    setLookingForQuery(currentValue)
+  }
+
+  
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    console.log("Form submitted")
+
+    if (selectedCity) {
+      console.log(selectedCity.city, selectedCity.state, lookingForQuery)
+      console.log("longitude:", selectedCity.longitude)
+      console.log("latitude:", selectedCity.latitude)
+    }   
+  }
+  
   return (
     <div className='flex items-center justify-between bg-gray-200 p-5'>
      <div className='flex items-center gap-2'>
       <h1 className='text-2xl font-bold'>Place Finder</h1>
      </div>
-     <form className='w-full max-w-3xl'>
+     <form className='w-full max-w-3xl' onSubmit={handleSubmit}>
       <FieldGroup>
         <div className='grid grid-cols-[1fr_1fr_auto] gap-4 items-end'>
         <Field>
           <FieldLabel>Location</FieldLabel>
           <Combobox items={cities}>
               <ComboboxInput 
+                value={cityQuery}
                 type="text" 
                 placeholder="Search city..." 
                 showTrigger={false} 
                 className="bg-white"
-                onChange={handleInputChange}
+                onChange={handleCityInputChange}  
+                required
               />
               <ComboboxContent>
                 <ComboboxEmpty>
-                  {query.length < MIN_ADDRESS_LENGTH 
+                  {cityQuery.length < MIN_ADDRESS_LENGTH 
                     ? "Type at least 3 characters..." 
                     : "No cities found."}
                 </ComboboxEmpty>
                 <ComboboxList>
-                  {(item: string) => (
-                    <ComboboxItem key={item} value={item}>{item}</ComboboxItem>
+                  {(item: cityInfo) => (
+                    <ComboboxItem key={item.formatted} value={item.formatted} onClick={() => handleCitySelect(item)}>{item.formatted}</ComboboxItem>
                   )}
                 </ComboboxList>
               </ComboboxContent>
@@ -114,7 +156,7 @@ function Header() {
         </Field>
         <Field>
           <FieldLabel>Looking for</FieldLabel>
-          <Input type="text" placeholder="Parks, coffee, museums..." className='bg-white' />
+          <Input type="text" placeholder="Parks, coffee, museums..." className='bg-white' required onChange={handleLookingForInputChange}/>
         </Field>
         <Button type="submit" size="lg">Search</Button>
         </div>

@@ -26,3 +26,10 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+
+# Local Netlify folder
+.netlify
+
+# Other files to ignore
+test.html
+notes.txt

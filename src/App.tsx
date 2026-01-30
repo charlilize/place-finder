@@ -7,7 +7,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { useEffect, useState } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+import { useEffect, useState, useRef } from "react";
 
 interface q {
   location: string;
@@ -33,12 +36,15 @@ function App() {
   const [query, setQuery] = useState<q | null>(null); // Full query info from the user's search
   const [places, setPlaces] = useState<Place[]>([]); // data retrieved from Google Local API
   const [fetchingData, setFetchingData] = useState(false); // for showing/hiding loading spinner
+  const mapRef = useRef<L.Map | null>(null); // keep reference of map instance from Leaflet to change it
 
   // If a query is set, fetch data from Google Local to populate cards
   useEffect(() => {
-    if (!query) {
+    if (!query || !mapRef.current) {
       return;
     }
+
+    mapRef.current.setView([query.lat, query.long], 13);
 
     console.log("in app:", query);
 
@@ -70,6 +76,27 @@ function App() {
   useEffect(() => {
     console.log("places updated: ", places);
   }, [places]);
+
+  // Create the map on mount
+  useEffect(() => {
+    if (mapRef.current) return;
+    mapRef.current = L.map("map").setView([37.7749, -122.4194], 13);
+
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution:
+        '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(mapRef.current);
+
+    // when component unmounts, delete the map since React in Strict Mode renders components twice
+    // to not get the error of already initializing a map
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -115,9 +142,7 @@ function App() {
           )}
         </div>
         {/* Map */}
-        <div className="w-[48.5%] h-[82vh] bg-gray-200 mr-5">
-          <h1>Map</h1>
-        </div>
+        <div className="w-[48.5%] h-[82vh] bg-gray-200 mr-5" id="map"></div>
       </div>
     </div>
   );

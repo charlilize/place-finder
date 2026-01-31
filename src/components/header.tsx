@@ -41,6 +41,11 @@ function Header({
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // set timer for 300ms
   const abortControllerRef = useRef<AbortController | null>(null); // like the cancel button for api requests
 
+  // useEffect(() => {
+  //   console.log("dropdown: ", cities);
+  // }, [cities]);
+
+  // Function for when user is typing in a city, render dropdown after 300ms
   const handleCityInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const currentValue = e.target.value;
     setCityQuery(currentValue);
@@ -70,7 +75,9 @@ function Header({
 
       try {
         const apiKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
-        const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(currentValue)}&type=city&limit=5&format=json&apiKey=${apiKey}`;
+        const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(
+          currentValue,
+        )}&type=city&limit=5&format=json&apiKey=${apiKey}`;
 
         // make api request and link to stop button
         const response = await fetch(url, {
@@ -111,11 +118,13 @@ function Header({
     }, DELAY);
   };
 
+  // When user clicks on an item on search cities dropdown
   const handleCitySelect = (item: cityInfo) => {
     setCityQuery(item.formatted);
     setSelectedCity(item);
   };
 
+  // When user types in what they're looking for, update variable
   const handleLookingForInputChange = (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -123,16 +132,23 @@ function Header({
     setLookingForQuery(currentValue);
   };
 
+  // When user clicks search button
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log("Form submitted");
 
-    if (selectedCity) {
+    // UI deals with empty city field
+    // If they didn't select something from dropdown but have something typed, set city to the first one from dropdown
+    // if selectedCity doesn't exist
+    const cityToUse = selectedCity || cities[0];
+
+    // If they selected a city in the dropdown, set the query
+    if (cityToUse) {
       getQuery({
-        location: `${selectedCity.city}, ${selectedCity.state}, ${selectedCity.country}`,
+        location: `${cityToUse.city}, ${cityToUse.state}, ${cityToUse.country}`,
         lookingFor: lookingForQuery,
-        long: selectedCity.longitude,
-        lat: selectedCity.latitude,
+        long: cityToUse.longitude,
+        lat: cityToUse.latitude,
       });
     }
   };

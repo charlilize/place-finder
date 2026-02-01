@@ -38,6 +38,10 @@ interface Place {
     website: string; // add a way to go to website
     directions: string;
   };
+  gps_coordinates: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 const PLACES_PER_PAGE = 4; // how many places to show on each page
@@ -46,10 +50,11 @@ function App() {
   const [query, setQuery] = useState<q | null>(null); // Full query info from the user's search
   const [places, setPlaces] = useState<Place[]>([]); // data retrieved from Google Local API
   const [fetchingData, setFetchingData] = useState(false); // for showing/hiding loading spinner
-  const mapRef = useRef<L.Map | null>(null); // keep reference of map instance from Leaflet to change it
   const [currPage, setCurrPage] = useState(1); // for page pagination, when changes, whole App() rerenders
 
+  const mapRef = useRef<L.Map | null>(null); // keep reference of map instance from Leaflet to change it
   const abortControllerRef = useRef<AbortController | null>(null); // like the cancel button for api requests
+  const markersRef = useRef<L.Marker[]>([]);
 
   // If a query is set, fetch data from Google Local to populate cards
   useEffect(() => {
@@ -100,9 +105,35 @@ function App() {
     fetchGoogleLocalPlaces();
   }, [query]);
 
-  // in here also could map through the places and find corresponding tiktok vids
+  // Update markers for every new set of places
   useEffect(() => {
-    console.log("places updated: ", places);
+    if (!mapRef.current || !places) return;
+
+    const map = mapRef.current;
+
+    // remove the markers
+    markersRef.current.forEach((marker) => {
+      marker.remove();
+    });
+    markersRef.current = []; // clear the array
+
+    // add new markers
+    places
+      .filter((p) => p.gps_coordinates) // only keep places with coordinates
+      .forEach((p) => {
+        const lat = p.gps_coordinates.latitude;
+        const long = p.gps_coordinates.longitude;
+
+        const marker = L.marker([lat, long])
+          .bindTooltip(p.title, {
+            permanent: true,
+            offset: [-16, -15],
+            direction: "top",
+          })
+          .addTo(map);
+
+        markersRef.current.push(marker);
+      });
   }, [places]);
 
   // Create the map on mount
@@ -167,7 +198,7 @@ function App() {
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <CardTitle>{place.title}</CardTitle>
-                    <p className="shrink-0">{`${place.rating} (${place.reviews})`}</p>
+                    <p className="shrink-0 pr-1">{`${place.rating} (${place.reviews})`}</p>
                   </div>
                   <CardDescription>{place.description}</CardDescription>
                   <p>{place.price == "$" ? "" : place.price}</p>

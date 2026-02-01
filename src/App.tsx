@@ -6,6 +6,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -32,11 +41,14 @@ interface Place {
   };
 }
 
+const PLACES_PER_PAGE = 4; // how many places to show on each page
+
 function App() {
   const [query, setQuery] = useState<q | null>(null); // Full query info from the user's search
   const [places, setPlaces] = useState<Place[]>([]); // data retrieved from Google Local API
   const [fetchingData, setFetchingData] = useState(false); // for showing/hiding loading spinner
   const mapRef = useRef<L.Map | null>(null); // keep reference of map instance from Leaflet to change it
+  const [currPage, setCurrPage] = useState(1); // for page pagination, when changes, whole App() rerenders
 
   // If a query is set, fetch data from Google Local to populate cards
   useEffect(() => {
@@ -46,7 +58,7 @@ function App() {
 
     mapRef.current.setView([query.lat, query.long], 13);
 
-    console.log("in app:", query);
+    console.log("query", query);
 
     // Link to the Netlify function that will fetch the data from Google Local
     const url = `/.netlify/functions/search?location=${query?.location}&q=${query?.lookingFor}`;
@@ -61,6 +73,7 @@ function App() {
         if (response.ok) {
           const data = await response.json();
           setPlaces(data["local_results"]);
+          setCurrPage(1);
         }
       } catch (error) {
         console.log("Error fetching Google Local Places", error);
@@ -98,6 +111,14 @@ function App() {
     };
   }, []);
 
+  // Calculate which places to show depending on page pagination every re-render
+  // Starting and end index of places array for each page
+  const startIndex = (currPage - 1) * PLACES_PER_PAGE;
+  const endIndex = startIndex + PLACES_PER_PAGE;
+  const placesToShow = (places || []).slice(startIndex, endIndex);
+  const totalPages = Math.ceil(places.length / PLACES_PER_PAGE);
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1); // create an array of page numbers
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <Header getQuery={setQuery} />
@@ -106,8 +127,8 @@ function App() {
         <div className="w-[51.5%] h-full p-2 pt-12 flex flex-wrap gap-4 content-start justify-center overflow-y-auto scrollbar-none">
           {fetchingData ? (
             <Spinner className="size-8" />
-          ) : places && places.length > 0 ? (
-            places.map((place, index) => (
+          ) : placesToShow && placesToShow.length > 0 ? (
+            placesToShow.map((place, index) => (
               <Card
                 key={index}
                 className="relative w-full max-w-xs overflow-hidden pt-0"
@@ -140,6 +161,36 @@ function App() {
           ) : (
             <p className="text-xl font-bold">Start searching!</p>
           )}
+          {places && places.length > 0 && !fetchingData ? (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  {currPage === 1 ? null : (
+                    <PaginationPrevious
+                      onClick={() => setCurrPage(currPage - 1)}
+                    />
+                  )}
+                </PaginationItem>
+
+                {pageNumbers.map((pageNum) => (
+                  <PaginationItem key={pageNum}>
+                    <PaginationLink
+                      onClick={() => setCurrPage(pageNum)}
+                      isActive={currPage === pageNum}
+                    >
+                      {pageNum}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+
+                <PaginationItem>
+                  {currPage === totalPages ? null : (
+                    <PaginationNext onClick={() => setCurrPage(currPage + 1)} />
+                  )}
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          ) : null}
         </div>
         {/* Map */}
         <div className="w-[48.5%] h-[82vh] bg-gray-200 mr-5" id="map"></div>

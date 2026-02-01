@@ -37,6 +37,7 @@ function Header({
   const [selectedCity, setSelectedCity] = useState<cityInfo | null>(null); // City that is selected
   const [cityQuery, setCityQuery] = useState(""); // Query to search for cities
   const [lookingForQuery, setLookingForQuery] = useState(""); // Query to search for places
+  const [citiesLoading, setCitiesLoading] = useState(false);
 
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // set timer for 300ms
   const abortControllerRef = useRef<AbortController | null>(null); // like the cancel button for api requests
@@ -63,6 +64,7 @@ function Header({
     // Clear results if input is empty or too short
     if (!currentValue || currentValue.length < MIN_ADDRESS_LENGTH) {
       setCities([]); // clear dropdown
+      setSelectedCity(null);
       return;
     }
 
@@ -72,6 +74,8 @@ function Header({
     debounceTimeoutRef.current = setTimeout(async () => {
       // create a way to cancel this specific request later
       abortControllerRef.current = new AbortController();
+
+      setCitiesLoading(true);
 
       try {
         const apiKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
@@ -114,6 +118,8 @@ function Header({
         if (error instanceof Error && error.name !== "AbortError") {
           console.error("Geocoding error:", error);
         }
+      } finally {
+        setCitiesLoading(false);
       }
     }, DELAY);
   };
@@ -172,6 +178,13 @@ function Header({
                   className="bg-white"
                   onChange={handleCityInputChange}
                   required
+                  // Show red error if there is no city selected and no cities in dropdown
+                  // (meaning no suggestions for what they inputted)
+                  aria-invalid={
+                    !selectedCity &&
+                    cities.length === 0 &&
+                    cityQuery.length != 0
+                  }
                 />
                 <ComboboxContent>
                   <ComboboxEmpty>
@@ -203,7 +216,12 @@ function Header({
                 onChange={handleLookingForInputChange}
               />
             </Field>
-            <Button type="submit" size="lg">
+            <Button
+              type="submit"
+              size="lg"
+              // Disable when there's no cities loading OR no city is selected and no cities in dropdown
+              disabled={citiesLoading || (!selectedCity && cities.length === 0)}
+            >
               Search
             </Button>
           </div>

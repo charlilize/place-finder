@@ -19,7 +19,9 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 import { useEffect, useState, useRef } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
+// User's search (Geoapify API)
 interface q {
   location: string;
   lookingFor: string;
@@ -27,6 +29,7 @@ interface q {
   lat: number;
 }
 
+// Structure of data from Google Local Places API
 interface Place {
   title: string;
   description: string;
@@ -44,13 +47,46 @@ interface Place {
   };
 }
 
+interface TikTokVideo {
+  wmplay: string;
+}
+
 const PLACES_PER_PAGE = 4; // how many places to show on each page
 
 function App() {
   const [query, setQuery] = useState<q | null>(null); // Full query info from the user's search
-  const [places, setPlaces] = useState<Place[]>([]); // data retrieved from Google Local API
   const [fetchingData, setFetchingData] = useState(false); // for showing/hiding loading spinner
   const [currPage, setCurrPage] = useState(1); // for page pagination, when changes, whole App() rerenders
+  const [places, setPlaces] = useState<Place[]>([]); // data retrieved from Google Local API
+  const [tiktokVideos, setTiktokVideos] = useState<
+    Record<string, TikTokVideo[]>
+  >({}); // {"place name": TiktokVideos[]}
+
+  // DUMMY DATA for las vegas "matcha"
+  // const [tiktokVideos, setTiktokVideos] = useState<
+  //   Record<string, TikTokVideo[]>
+  // >({
+  //   "True Matcha": [
+  //     {
+  //       wmplay: "/vid1.MP4",
+  //     },
+  //   ],
+  //   "Urban Matcha": [
+  //     {
+  //       wmplay: "/vid2.MP4",
+  //     },
+  //   ],
+  //   "Matcha Cafe Maiko of Las Vegas": [
+  //     {
+  //       wmplay: "/vid3.MP4",
+  //     },
+  //   ],
+  //   "Nana's Green Tea": [
+  //     {
+  //       wmplay: "/vid4.MP4",
+  //     },
+  //   ],
+  // });
 
   const mapRef = useRef<L.Map | null>(null); // keep reference of map instance from Leaflet to change it
   const abortControllerRef = useRef<AbortController | null>(null); // like the cancel button for api requests
@@ -92,6 +128,7 @@ function App() {
           const data = await response.json();
           setPlaces(data["local_results"] || []);
           setCurrPage(1);
+          setTiktokVideos({}); // get rid of old tiktok videos as new search
         }
       } catch (error) {
         if (error instanceof Error && error.name !== "AbortError") {
@@ -110,6 +147,8 @@ function App() {
     if (!mapRef.current || !places) return;
 
     const map = mapRef.current;
+
+    console.log("[markers] places updated. total places:", places.length);
 
     // remove the markers
     markersRef.current.forEach((marker) => {
@@ -134,6 +173,8 @@ function App() {
 
         markersRef.current.push(marker);
       });
+
+    console.log("[markers] markers on map:", markersRef.current.length);
   }, [places]);
 
   // Create the map on mount
@@ -166,6 +207,56 @@ function App() {
   const totalPages = Math.ceil(safePlaces.length / PLACES_PER_PAGE);
   const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1); // create an array of page numbers
 
+  // DISABLED FOR DUMMY DATA
+  // Pull TikTok videos for each place
+  useEffect(() => {
+    const start = (currPage - 1) * PLACES_PER_PAGE;
+    const end = start + PLACES_PER_PAGE;
+    const visiblePlaces = safePlaces.slice(start, end);
+
+    // Load tiktoks for the places on the current pagination page (skip if already cached)
+    visiblePlaces.forEach((p) => {
+      // Skip API call if we already have videos for this place
+      if (tiktokVideos[p.title]?.length) return;
+
+      const que = `${query?.location} ${p.title}`;
+      const url = `https://tiktok-scraper7.p.rapidapi.com/feed/search?keywords=${encodeURIComponent(
+        que,
+      )}&region=us&count=5&cursor=0&publish_time=0&sort_type=0`;
+      const options = {
+        method: "GET",
+        headers: {
+          "x-rapidapi-key": import.meta.env.VITE_TIKTOK_API_KEY,
+          "x-rapidapi-host": "tiktok-scraper7.p.rapidapi.com",
+        },
+      };
+
+      const fetchTiktok = async () => {
+        try {
+          const response = await fetch(url, options);
+          const data = await response.json();
+          const videos = data.data?.videos || [];
+          console.log("tiktok videos for ", p.title, data);
+
+          const tiktokVideosData: TikTokVideo[] = videos.map(
+            (vid: { wmplay?: string }) => ({
+              wmplay: vid.wmplay || "",
+            }),
+          );
+
+          setTiktokVideos((prev) => ({
+            ...prev,
+            [p.title]: tiktokVideosData,
+          }));
+        } catch (error) {
+          console.log(error);
+        }
+      };
+      fetchTiktok();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [places, currPage, query?.location]); // fetch tiktoks when places changes (new search), currPage changes (pagination), or location changes
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <Header getQuery={setQuery} />
@@ -178,27 +269,30 @@ function App() {
             placesToShow.map((place, index) => (
               <Card
                 key={index}
-                className="relative w-full max-w-xs overflow-hidden pt-0"
+                className="relative w-full max-w-xs overflow-hidden pt-0 bg-muted"
               >
-                <div className="bg-primary absolute inset-0 z-30 aspect-4/3 opacity-50 mix-blend-color" />
-                <img
-                  src={
-                    place.thumbnail
-                      ? place.thumbnail
-                      : "https://images.unsplash.com/photo-1604076850742-4c7221f3101b?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                  }
-                  className={
-                    place.thumbnail
-                      ? ""
-                      : "relative z-20 aspect-4/3 w-full object-cover brightness-60 grayscale"
-                  }
-                  alt="Photo by mymind on Unsplash"
-                  title="Photo by mymind on Unsplash"
-                />
+                {tiktokVideos[place.title]?.[0]?.wmplay ? (
+                  <div className="relative w-full aspect-9/16">
+                    <video
+                      src={tiktokVideos[place.title]?.[0]?.wmplay}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      className="w-full h-full object-cover absolute inset-0"
+                    />
+                  </div>
+                ) : (
+                  <Skeleton className="w-full aspect-9/16" />
+                )}
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <CardTitle>{place.title}</CardTitle>
-                    <p className="shrink-0 pr-1">{`${place.rating} (${place.reviews})`}</p>
+                    <p className="shrink-0 pr-1">
+                      {place.rating && place.reviews
+                        ? `${place.rating} (${place.reviews})`
+                        : ""}
+                    </p>
                   </div>
                   <CardDescription>{place.description}</CardDescription>
                   <p>{place.price == "$" ? "" : place.price}</p>
@@ -226,16 +320,18 @@ function App() {
                   )}
                 </PaginationItem>
 
-                {pageNumbers.map((pageNum) => (
-                  <PaginationItem key={pageNum}>
-                    <PaginationLink
-                      onClick={() => setCurrPage(pageNum)}
-                      isActive={currPage === pageNum}
-                    >
-                      {pageNum}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
+                {totalPages > 1
+                  ? pageNumbers.map((pageNum) => (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          onClick={() => setCurrPage(pageNum)}
+                          isActive={currPage === pageNum}
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))
+                  : null}
 
                 <PaginationItem>
                   {currPage === totalPages ? null : (

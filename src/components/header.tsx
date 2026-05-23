@@ -80,7 +80,7 @@ function Header({
       try {
         const apiKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
         const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(
-          currentValue,
+          currentValue
         )}&type=city&limit=5&format=json&apiKey=${apiKey}`;
 
         // make api request and link to stop button
@@ -107,7 +107,7 @@ function Header({
               country: result.country,
               longitude: result.lon,
               latitude: result.lat,
-            }),
+            })
           );
 
           // set city names in dropdown
@@ -132,7 +132,7 @@ function Header({
 
   // When user types in what they're looking for, update variable
   const handleLookingForInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const currentValue = e.target.value;
     setLookingForQuery(currentValue);
